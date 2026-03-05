@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Crazy Dice</title>
+  <script type="module" crossorigin src="/assets/index-DFHQhUD6.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CYUAGm1e.css">
+</head>
+<body>
+  <div id="canvas-container">
+    <div id="floating-text-layer" aria-hidden="true"></div>
+    <div id="ui-layer">
+      <div id="chips-container" class="chips-container" aria-label="Owned casino chips"></div>
+      <div class="stats">
+        <div class="total-score-label">TOTAL BANK</div>
+        <div id="total-score-val">0</div>
+        <div id="fortune-label" class="fortune-label">FORTUNE: 10%</div>
+      </div>
+      <div id="timer-container">
+        <div class="timer-label">TIME RUSH</div>
+        <div id="timer-val">20.00</div>
+      </div>
+      <div id="ante-container" class="ante-container">
+        <div class="ante-header">
+          <span id="ante-number" class="ante-number">ANTE 1</span>
+          <span class="ante-label">TO PASS</span>
+        </div>
+        <div id="ante-target-val" class="ante-target-val">2,000</div>
+        <div class="ante-sublabel" id="ante-sublabel">score to earn 100 gold (next ante)</div>
+        <div class="ante-progress-bar-track">
+          <div id="ante-progress-bar-fill" class="ante-progress-bar-fill"></div>
+        </div>
+        <div class="ante-progress" id="ante-progress">0 / 2,000</div>
+      </div>
+      <div class="score-container" id="score-container">
+        <div id="huge-score"></div>
+        <div id="multiplier-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <h1 id="overlay-title">CRAZY DICE</h1>
+    <p id="overlay-desc">20 Seconds. Lock your combos and rapidly click the remaining dice to multiply your score every time they land!</p>
+    <button id="start-btn">START</button>
+  </div>
+
+  <div id="shop-overlay" class="shop-overlay hidden">
+    <div class="shop-header">
+      <h2 id="shop-title">SHOP</h2>
+      <div id="shop-gold" class="shop-gold"><span class="shop-gold-icon">🪙</span> <span id="shop-gold-val">0</span></div>
+    </div>
+    <p id="shop-ante-hint" class="shop-ante-hint"></p>
+    <div id="shop-items" class="shop-items"></div>
+    <button id="shop-continue-btn" class="shop-continue-btn">CONTINUE</button>
+  </div>
+
+  <div id="game-over-overlay" class="game-over-overlay hidden">
+    <h2 id="game-over-title">GAME OVER</h2>
+    <p id="game-over-bank" class="game-over-bank">Bank: 0</p>
+    <button id="play-again-btn">PLAY AGAIN</button>
+  </div>
+
+</body>
+</html>
