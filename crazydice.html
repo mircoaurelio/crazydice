@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Crazy Dice</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap');
+
+        :root {
+            --primary: #ff6b6b;
+            --secondary: #4ecdc4;
+            --bg: #e8ecf1;
+            --text-main: #2d3436;
+            --text-muted: #636e72;
+            --shadow-color: rgba(45, 52, 54, 0.15);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg);
+            font-family: 'Fredoka', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            color: var(--text-main);
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            color: var(--text-main);
+            letter-spacing: 2px;
+        }
+
+        .score-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #huge-score {
+            font-size: 7rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+            line-height: 1;
+            transform: scale(0.5);
+            text-shadow: 0px 8px 0px rgba(255, 107, 107, 0.2);
+        }
+
+        #multiplier-text {
+            font-size: 2.5rem;
+            color: var(--secondary);
+            margin-top: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0px 4px 0px rgba(78, 205, 196, 0.2);
+        }
+
+        .stats {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .total-score-label {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        .fortune-label {
+            font-size: 0.9rem;
+            color: var(--primary);
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+
+        #total-score-val {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--text-main);
+            line-height: 1;
+            transform-origin: left center;
+        }
+
+        #timer-container {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            text-align: right;
+        }
+
+        .timer-label {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        #timer-val {
+            font-size: 4rem;
+            font-weight: 900;
+            color: var(--text-main);
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        #timer-val.danger {
+            color: var(--primary);
+            animation: pulse-fast 0.5s infinite alternate;
+        }
+
+        .floating-text {
+            position: absolute;
+            color: var(--text-main);
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            font-size: 2.5rem;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            text-shadow: 0px 4px 0px rgba(0,0,0,0.1);
+        }
+
+        .die-label {
+            position: absolute;
+            color: var(--text-main);
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.2s ease, font-size 0.3s ease, color 0.2s ease;
+            z-index: 5;
+            text-shadow: 0px 3px 0px rgba(0,0,0,0.1);
+        }
+
+        .die-label.combo-label {
+            font-size: 1.8rem;
+        }
+
+        /* OVERLAY UI */
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(245, 246, 250, 0.9);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        #overlay h1 {
+            font-size: 5.5rem;
+            margin-bottom: 10px;
+            color: var(--text-main);
+            text-shadow: 0px 8px 0px var(--shadow-color);
+            animation: float-title 3s ease-in-out infinite;
+        }
+
+        @keyframes float-title {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(3deg); }
+        }
+
+        #overlay p {
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            margin-bottom: 40px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        button {
+            background: var(--primary);
+            border: none;
+            color: #fff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            padding: 20px 80px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 0px #e05656, 0 15px 20px rgba(255, 107, 107, 0.4);
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 13px 0px #e05656, 0 20px 25px rgba(255, 107, 107, 0.5);
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0px #e05656, 0 5px 10px rgba(255, 107, 107, 0.3);
+        }
+
+        @keyframes pulse-fast {
+            from { opacity: 0.6; }
+            to { opacity: 1; }
+        }
+
+        /* Mobile tweaks */
+        @media (max-width: 768px) {
+            #overlay h1 { font-size: 3rem; }
+            button { font-size: 1.5rem; padding: 15px 40px; }
+            #huge-score { font-size: 4rem; }
+            .stats { top: 20px; left: 20px; }
+            #timer-container { top: 20px; right: 20px; }
+            #timer-val { font-size: 2.5rem; }
+            #total-score-val { font-size: 2.5rem; }
+            #ui-layer { padding: 20px; }
+        }
+    </style>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cannon.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <!-- GSAP for Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="stats">
+            <div class="total-score-label">TOTAL BANK</div>
+            <div id="total-score-val">0</div>
+            <div class="fortune-label">FORTUNE: 10%</div>
+        </div>
+
+        <div id="timer-container">
+            <div class="timer-label">TIME RUSH</div>
+            <div id="timer-val">20.00</div>
+        </div>
+
+        <div class="score-container" id="score-container">
+            <div id="huge-score">0</div>
+            <div id="multiplier-text">x1 MULTIPLIER</div>
+        </div>
+    </div>
+
+    <!-- START / GAMEOVER OVERLAY -->
+    <div id="overlay">
+        <h1 id="overlay-title">CRAZY DICE</h1>
+        <p id="overlay-desc">20 Seconds. Lock your combos and rapidly click the remaining dice to multiply your score every time they land!</p>
+        <button id="start-btn">START</button>
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        const state = {
+            status: 'menu', // 'menu', 'playing', 'gameover'
+            diceCount: 6,
+            totalScore: 0,
+            shakeIntensity: 0,
+            timeLeft: 20.00,
+            lastTick: 0,
+            fortune: 0.10, // 10% chance for a rare perk to spawn on combo
+            playerHasRolled: false
+        };
+
+        // --- AUDIO ENGINE (DOPAMINE SYNTH) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playPop() {
+            if (audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        // Referee Whistle Sound
+        function playWhistle() {
+            if (audioCtx.state === 'suspended') return;
+            const duration = 0.6;
+            
+            // Two high-pitched oscillators slightly detuned create a harsh beating effect
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc1.type = 'triangle';
+            osc2.type = 'triangle';
+            
+            // Frequency modulation to simulate the "pea" rattling inside the whistle
+            const mod = audioCtx.createOscillator();
+            const modGain = audioCtx.createGain();
+            mod.type = 'sine';
+            mod.frequency.value = 50; // fast flutter
+            modGain.gain.value = 100;
+
+            osc1.frequency.setValueAtTime(2600, audioCtx.currentTime);
+            osc2.frequency.setValueAtTime(2650, audioCtx.currentTime); // detuned
+
+            mod.connect(modGain);
+            modGain.connect(osc1.frequency);
+            modGain.connect(osc2.frequency);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            // Sharp, loud envelope
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.25, audioCtx.currentTime + 0.05); // attack
+            gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + duration - 0.1); // sustain
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration); // release
+
+            osc1.start();
+            osc2.start();
+            mod.start();
+            
+            osc1.stop(audioCtx.currentTime + duration);
+            osc2.stop(audioCtx.currentTime + duration);
+            mod.stop(audioCtx.currentTime + duration);
+        }
+
+        function playScore(multiplier) {
+            if (audioCtx.state === 'suspended') return;
+            if (multiplier === 1) {
+                // Basic plink
+                playTone(300 + Math.random() * 100, 'sine', 0.1, 0.1);
+            } else {
+                // Juicy dopamine combo chord! Scales with multiplier!
+                const baseFreq = Math.min(300 + (multiplier * 50), 1000); 
+                playTone(baseFreq, 'square', 0.2, 0.1);
+                setTimeout(() => playTone(baseFreq * 1.25, 'sine', 0.3, 0.15), 30);
+                setTimeout(() => playTone(baseFreq * 1.5, 'triangle', 0.4, 0.1), 70);
+            }
+        }
+
+        function playTick() {
+            playTone(800, 'square', 0.05, 0.05);
+        }
+
+        function playGameOver() {
+            if (audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 1);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1);
+        }
+
+        // --- THREE.JS & CANNON.JS SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0xf5f6fa, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 10, 14);
+        camera.lookAt(0, -2, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const world = new CANNON.World();
+        // Increased gravity for faster falls = higher APM capability
+        world.gravity.set(0, -50, 0);
+        world.broadphase = new CANNON.NaiveBroadphase();
+        world.solver.iterations = 20;
+
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        // --- ENVIRONMENT ---
+        function createFloorTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Base color
+            ctx.fillStyle = '#f0f3f8';
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Draw a stylish dot grid
+            ctx.fillStyle = '#dfe6e9';
+            for (let i = 0; i < 512; i += 64) {
+                for (let j = 0; j < 512; j += 64) {
+                    ctx.beginPath();
+                    ctx.arc(i + 32, j + 32, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(20, 20); // Tile it seamlessly
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            return texture;
+        }
+
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff, 
+            map: createFloorTexture(),
+            roughness: 0.9, 
+            metalness: 0.05 
+        });
+        const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+        floorMesh.rotation.x = -Math.PI / 2;
+        floorMesh.receiveShadow = true;
+        scene.add(floorMesh);
+
+        const floorBody = new CANNON.Body({
+            mass: 0,
+            shape: new CANNON.Plane(),
+            material: new CANNON.Material({ friction: 0.3, restitution: 0.2 }) // Lower restitution for less bouncing
+        });
+        floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        world.addBody(floorBody);
+
+        // Grid helper removed in favor of the new dotted floor texture!
+
+        // Invisible Walls (Tightened to keep dice centered and clickable)
+        const wallMaterial = new CANNON.Material({ friction: 0.1, restitution: 0.5 });
+        const wallThickness = 1;
+        const wallSize = 25;
+        const walls = [
+            { pos: [0, 10, -5], rot: [0, 0, 0] },       // Top (closer)
+            { pos: [0, 10, 6.5], rot: [0, Math.PI, 0] },// Bottom (closer)
+            { pos: [-7.5, 10, 0], rot: [0, Math.PI/2, 0] }, // Left (tighter)
+            { pos: [7.5, 10, 0], rot: [0, -Math.PI/2, 0] }  // Right (tighter)
+        ];
+        
+        walls.forEach(w => {
+            // Taller walls to prevent high-speed jump outs
+            const body = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(wallSize/2, 20, wallThickness/2)), material: wallMaterial });
+            body.position.set(...w.pos);
+            body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), w.rot[1]);
+            world.addBody(body);
+        });
+
+        // --- DICE GENERATION ---
+        const diceArray = [];
+        const diceSize = 1;
+
+        function createDiceTexture(number, isHover = false, highlightColorStr = '#ff6b6b') {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = isHover ? highlightColorStr : '#ffffff';
+            ctx.fillRect(0, 0, 256, 256);
+            
+            // Inset the border more so it wraps nicely around the new rounded 3D corners
+            ctx.lineWidth = 12;
+            ctx.strokeStyle = isHover ? highlightColorStr : '#e2e8f0';
+            ctx.strokeRect(15, 15, 226, 226);
+
+            ctx.fillStyle = isHover ? '#ffffff' : '#2d3436';
+            
+            const drawDot = (x, y) => {
+                ctx.beginPath();
+                ctx.arc(x, y, 22, 0, Math.PI * 2);
+                ctx.fill();
+            };
+
+            const center = 128, offset = 65;
+            if ([1, 3, 5].includes(number)) drawDot(center, center);
+            if ([2, 3, 4, 5, 6].includes(number)) { drawDot(center - offset, center - offset); drawDot(center + offset, center + offset); }
+            if ([4, 5, 6].includes(number)) { drawDot(center - offset, center + offset); drawDot(center + offset, center - offset); }
+            if (number === 6) { drawDot(center - offset, center); drawDot(center + offset, center); }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            return texture;
+        }
+
+        const standardMaterials = [
+            new THREE.MeshStandardMaterial({ map: createDiceTexture(3), roughness: 0.4, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ map: createDiceTexture(4), roughness: 0.4, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ map: createDiceTexture(1), roughness: 0.4, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ map: createDiceTexture(6), roughness: 0.4, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ map: createDiceTexture(2), roughness: 0.4, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ map: createDiceTexture(5), roughness: 0.4, metalness: 0.1 })
+        ];
+        
+        const comboColors = {
+            1: { hex: 0xff6b6b, str: '#ff6b6b' }, // Soft Red
+            2: { hex: 0xf39c12, str: '#f39c12' }, // Orange
+            3: { hex: 0xf1c40f, str: '#f1c40f' }, // Yellow
+            4: { hex: 0x2ecc71, str: '#2ecc71' }, // Green
+            5: { hex: 0x3498db, str: '#3498db' }, // Blue
+            6: { hex: 0x9b59b6, str: '#9b59b6' }  // Purple
+        };
+
+        const highlightMaterialsByValue = {};
+        for(let i = 1; i <= 6; i++) {
+            const col = comboColors[i];
+            highlightMaterialsByValue[i] = [
+                new THREE.MeshStandardMaterial({ map: createDiceTexture(3, true, col.str), roughness: 0.4, metalness: 0.1 }),
+                new THREE.MeshStandardMaterial({ map: createDiceTexture(4, true, col.str), roughness: 0.4, metalness: 0.1 }),
+                new THREE.MeshStandardMaterial({ map: createDiceTexture(1, true, col.str), roughness: 0.4, metalness: 0.1 }),
+                new THREE.MeshStandardMaterial({ map: createDiceTexture(6, true, col.str), roughness: 0.4, metalness: 0.1 }),
+                new THREE.MeshStandardMaterial({ map: createDiceTexture(2, true, col.str), roughness: 0.4, metalness: 0.1 }),
+                new THREE.MeshStandardMaterial({ map: createDiceTexture(5, true, col.str), roughness: 0.4, metalness: 0.1 })
+            ];
+        }
+
+        // Global cache for dynamically generating single glowing faces on bonus dice
+        const bonusMaterialCache = {};
+
+        // Create a custom Rounded Box Geometry by spherifying the corners of a high-res box
+        // This preserves the 6-face material groups and UV mapping perfectly!
+        const diceGeo = new THREE.BoxGeometry(diceSize, diceSize, diceSize, 8, 8, 8);
+        const pos = diceGeo.attributes.position;
+        const radius = 0.15; // How round the edges are
+        const limit = diceSize / 2 - radius;
+        
+        for (let i = 0; i < pos.count; i++) {
+            let x = pos.getX(i);
+            let y = pos.getY(i);
+            let z = pos.getZ(i);
+            
+            // Find clamped center point for the corner sphere
+            let cx = Math.max(-limit, Math.min(limit, x));
+            let cy = Math.max(-limit, Math.min(limit, y));
+            let cz = Math.max(-limit, Math.min(limit, z));
+            
+            // Distance from clamped center
+            let dx = x - cx;
+            let dy = y - cy;
+            let dz = z - cz;
+            
+            // Normalize and scale by radius
+            let len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            if (len > 0) {
+                dx = (dx / len) * radius;
+                dy = (dy / len) * radius;
+                dz = (dz / len) * radius;
+            }
+            
+            pos.setXYZ(i, cx + dx, cy + dy, cz + dz);
+        }
+        diceGeo.computeVertexNormals();
+
+        const diceMaterialPhysics = new CANNON.Material({ friction: 0.3, restitution: 0.3 });
+        world.addContactMaterial(new CANNON.ContactMaterial(floorBody.material, diceMaterialPhysics, { friction: 0.4, restitution: 0.2 }));
+
+        function addDice(count, spawnInAir = false, perkType = 'normal') {
+            for (let i = 0; i < count; i++) {
+                let mesh;
+
+                // Both normal and bonus dice start out looking like completely normal dice
+                mesh = new THREE.Mesh(diceGeo, standardMaterials);
+
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+
+                const shape = new CANNON.Box(new CANNON.Vec3(diceSize/2, diceSize/2, diceSize/2));
+                const body = new CANNON.Body({ mass: 1, shape: shape, material: diceMaterialPhysics });
+                
+                if (spawnInAir) {
+                    body.position.set((Math.random() - 0.5) * 4, 15 + Math.random() * 5, (Math.random() - 0.5) * 4);
+                    body.velocity.set((Math.random() - 0.5) * 5, -10, (Math.random() - 0.5) * 5);
+                    body.angularVelocity.set((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
+                } else {
+                    body.position.set((Math.random() - 0.5) * 8, 5 + Math.random() * 5, (Math.random() - 0.5) * 8);
+                }
+
+                world.addBody(body);
+
+                // Enable point lights so we can paint the floor, distance is set to 10
+                const light = new THREE.PointLight(0xffffff, 0, 10);
+                scene.add(light);
+
+                const label = document.createElement('div');
+                label.className = 'die-label';
+                document.body.appendChild(label);
+
+                diceArray.push({ mesh, body, light, value: 0, label, isResting: true, perkType, consumed: false, juggleMult: 1 });
+            }
+        }
+        
+        // Initial spawn
+        addDice(state.diceCount);
+
+        // --- PARTICLES ---
+        const particleCount = 1000;
+        const particlesGeo = new THREE.BufferGeometry();
+        const particlesPos = new Float32Array(particleCount * 3);
+        const particlesVel = [];
+        const particlesColor = new Float32Array(particleCount * 3);
+
+        for(let i=0; i<particleCount; i++) {
+            particlesPos[i*3] = 0; particlesPos[i*3+1] = -100; particlesPos[i*3+2] = 0; 
+            particlesVel.push(new THREE.Vector3(0,0,0));
+            const c = new THREE.Color(Math.random() > 0.5 ? 0xff6b6b : 0x4ecdc4);
+            particlesColor[i*3] = c.r; particlesColor[i*3+1] = c.g; particlesColor[i*3+2] = c.b;
+        }
+
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlesPos, 3));
+        particlesGeo.setAttribute('color', new THREE.BufferAttribute(particlesColor, 3));
+
+        const particlesMat = new THREE.PointsMaterial({ size: 0.3, vertexColors: true, blending: THREE.NormalBlending, transparent: true, opacity: 1, depthWrite: true });
+        const particleSystem = new THREE.Points(particlesGeo, particlesMat);
+        scene.add(particleSystem);
+        let activeParticles = 0;
+
+        function explosion(pos, count, colorHex) {
+            const startIdx = activeParticles;
+            const c = new THREE.Color(colorHex);
+            for(let i=0; i<count; i++) {
+                const idx = (startIdx + i) % particleCount;
+                particlesPos[idx*3] = pos.x; particlesPos[idx*3+1] = pos.y; particlesPos[idx*3+2] = pos.z;
+                particlesColor[idx*3] = c.r; particlesColor[idx*3+1] = c.g; particlesColor[idx*3+2] = c.b;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 0.5 + 0.2;
+                particlesVel[idx].set(Math.cos(angle)*speed, Math.random() * 0.5, Math.sin(angle)*speed);
+            }
+            activeParticles = (activeParticles + count) % particleCount;
+            particlesGeo.attributes.position.needsUpdate = true;
+            particlesGeo.attributes.color.needsUpdate = true;
+        }
+
+        function updateParticles() {
+            for(let i=0; i<particleCount; i++) {
+                if(particlesPos[i*3+1] > -50) {
+                    particlesPos[i*3] += particlesVel[i].x; particlesPos[i*3+1] += particlesVel[i].y; particlesPos[i*3+2] += particlesVel[i].z;
+                    particlesVel[i].y -= 0.02; 
+                    if(particlesPos[i*3+1] < 0) particlesPos[i*3+1] = -100; 
+                }
+            }
+            particlesGeo.attributes.position.needsUpdate = true;
+        }
+
+        // --- GAME LOGIC & CONTROLS ---
+        const scoreContainer = document.getElementById('score-container');
+        const hugeScore = document.getElementById('huge-score');
+        const multiplierText = document.getElementById('multiplier-text');
+        const totalScoreVal = document.getElementById('total-score-val');
+        const timerVal = document.getElementById('timer-val');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayDesc = document.getElementById('overlay-desc');
+        const startBtn = document.getElementById('start-btn');
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        startBtn.addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume(); // Enable audio
+            
+            playWhistle(); // Blow the referee whistle!
+
+            overlay.style.display = 'none';
+            state.status = 'playing';
+            state.timeLeft = 20.00;
+            state.totalScore = 0;
+            state.lastTick = 0;
+            state.playerHasRolled = false;
+            totalScoreVal.innerText = '0';
+            timerVal.classList.remove('danger');
+            
+            // Clean up old dice entirely for a fresh start
+            diceArray.forEach(die => {
+                scene.remove(die.mesh);
+                scene.remove(die.light);
+                world.removeBody(die.body);
+                if (die.label && die.label.parentNode) die.label.parentNode.removeChild(die.label);
+            });
+            diceArray.length = 0;
+
+            addDice(state.diceCount);
+
+            diceArray.forEach(die => {
+                die.body.position.set((Math.random() - 0.5) * 8, 5 + Math.random() * 5, (Math.random() - 0.5) * 8);
+                rollSingleDie(die, true);
+            });
+        });
+
+        window.addEventListener('pointermove', (event) => {
+            if (state.status !== 'playing') {
+                document.body.style.cursor = 'default';
+                return;
+            }
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(diceArray.map(d => d.mesh));
+            document.body.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+        });
+
+        window.addEventListener('pointerdown', (event) => {
+            if (state.status !== 'playing') return;
+            
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(diceArray.map(d => d.mesh));
+            if (intersects.length > 0) {
+                const clickedMesh = intersects[0].object;
+                const die = diceArray.find(d => d.mesh === clickedMesh);
+                
+                if (die.perkType === 'bonus') {
+                    activateBonusDie(die);
+                } else {
+                    rollSingleDie(die);
+                }
+            }
+        });
+
+        function activateBonusDie(die) {
+            if (die.consumed) return;
+            die.consumed = true;
+
+            const val = getDieValue(die.mesh);
+            let activePerk = '';
+            let perkColor = 0xffffff;
+            
+            // Map the face currently facing UP to the perk
+            if (val === 1 || val === 4) { activePerk = 'time'; perkColor = 0x00ff00; }
+            else if (val === 2 || val === 5) { activePerk = 'gold'; perkColor = 0xffd700; }
+            else if (val === 3 || val === 6) { activePerk = 'nova'; perkColor = 0xaa00ff; }
+
+            if (activePerk === 'time') {
+                state.timeLeft += 3;
+                showFloatingText(die.mesh.position, "+3 SECONDS!", true);
+                playTone(800, 'square', 0.2, 0.1);
+                playTone(1200, 'sine', 0.3, 0.1);
+            } else if (activePerk === 'gold') {
+                const goldVal = 1000;
+                state.totalScore += goldVal;
+                showFloatingText(die.mesh.position, `+${goldVal} GOLD!`, true);
+                playTone(1500, 'triangle', 0.4, 0.1);
+                totalScoreVal.innerText = state.totalScore;
+                gsap.fromTo(totalScoreVal, { scale: 1.5, color: '#ffd700' }, { scale: 1, color: 'var(--secondary)', duration: 0.5 });
+            } else if (activePerk === 'nova') {
+                showFloatingText(die.mesh.position, "NOVA BLAST!", true);
+                playTone(150, 'sawtooth', 0.5, 0.3);
+                triggerShake(0.8);
+                
+                // Blast all other normal dice back into the air!
+                diceArray.forEach(otherDie => {
+                    if (otherDie !== die && !otherDie.consumed) {
+                        rollSingleDie(otherDie, true); // true skips individual pop sound
+                    }
+                });
+            }
+
+            explosion(die.mesh.position, 100, perkColor);
+
+            // Clean up the consumed die
+            scene.remove(die.mesh);
+            scene.remove(die.light);
+            world.removeBody(die.body);
+            if (die.label && die.label.parentNode) die.label.parentNode.removeChild(die.label);
+            
+            const idx = diceArray.indexOf(die);
+            if (idx > -1) diceArray.splice(idx, 1);
+        }
+
+        function triggerShake(intensity) { state.shakeIntensity = intensity; }
+
+        function rollSingleDie(die, isInitialSetup = false) {
+            if (!isInitialSetup) {
+                state.playerHasRolled = true;
+                
+                if (!die.isResting) {
+                    die.juggleMult = Math.min((die.juggleMult || 1) + 1, 5);
+                    showFloatingText(die.mesh.position, `${die.juggleMult}x JUGGLE!`, true);
+                    playTone(400 + (die.juggleMult * 100), 'square', 0.1, 0.1);
+                } else {
+                    die.juggleMult = 1;
+                }
+                
+                playPop(); // Add pop sound
+                triggerShake(0.1 + (0.05 * (die.juggleMult || 1)));
+            } else {
+                die.juggleMult = 1;
+            }
+
+            // Dim the old score instantly so the player knows a new roll is happening
+            gsap.to(scoreContainer, { opacity: 0.3, duration: 0.1, scale: 0.9 });
+            
+            // Only reset the visual state of the clicked die if it's normal
+            if (die.perkType === 'normal') {
+                die.mesh.material = standardMaterials;
+                die.label.classList.remove('combo-label');
+                die.label.style.color = 'var(--text-main)';
+            }
+
+            die.isResting = false;
+            die.label.style.opacity = 0;
+            die.body.wakeUp();
+            
+            if (die.juggleMult > 1) {
+                // Drop straighter to make towers easier
+                die.body.velocity.set(
+                    (Math.random() - 0.5) * 2, 
+                    15 + Math.random() * 3 + (die.juggleMult * 2), 
+                    (Math.random() - 0.5) * 2
+                );
+            } else {
+                die.body.velocity.set((Math.random() - 0.5) * 8, 12 + Math.random() * 6, (Math.random() - 0.5) * 8);
+            }
+            
+            die.body.angularVelocity.set((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
+
+            // Visual pop
+            gsap.fromTo(die.mesh.scale, { x: 1.5, y: 1.5, z: 1.5 }, { x: 1, y: 1, z: 1, duration: 0.3, ease: "back.out(2)" });
+        }
+
+        function getDieValue(mesh) {
+            const faces = [
+                { vec: new THREE.Vector3(1, 0, 0), val: 3 },  // Right
+                { vec: new THREE.Vector3(-1, 0, 0), val: 4 }, // Left
+                { vec: new THREE.Vector3(0, 1, 0), val: 1 },  // Top
+                { vec: new THREE.Vector3(0, -1, 0), val: 6 }, // Bottom
+                { vec: new THREE.Vector3(0, 0, 1), val: 2 },  // Front
+                { vec: new THREE.Vector3(0, 0, -1), val: 5 }  // Back
+            ];
+            let maxDot = -Infinity; let value = -1;
+            faces.forEach(f => {
+                const dot = f.vec.clone().applyEuler(mesh.rotation).y; 
+                if (dot > maxDot) { maxDot = dot; value = f.val; }
+            });
+            return value;
+        }
+
+        function showFloatingText(pos3D, text, isCombo) {
+            const vector = pos3D.clone();
+            vector.project(camera);
+            const x = (vector.x * .5 + .5) * window.innerWidth;
+            const y = (vector.y * -.5 + .5) * window.innerHeight;
+
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            if(isCombo) el.style.color = 'var(--primary)';
+            el.innerText = text;
+            el.style.left = `${x}px`; el.style.top = `${y}px`;
+            document.body.appendChild(el);
+
+            gsap.fromTo(el, 
+                { y: y, opacity: 1, scale: 0.1 },
+                { y: y - 100, opacity: 0, scale: 2, duration: 1.5, ease: "elastic.out(1, 0.4)", onComplete: () => el.remove() }
+            );
+        }
+
+        function calculateResults(landings = 1) {
+            let counts = {};
+            let baseScore = 0;
+            let towerBonusAmount = 0;
+
+            // --- TOWER DETECTION ---
+            let stackedDice = new Set();
+            diceArray.forEach(dieA => {
+                if (!dieA.isResting || dieA.consumed) return;
+                diceArray.forEach(dieB => {
+                    if (dieA === dieB || !dieB.isResting || dieB.consumed) return;
+
+                    const dx = Math.abs(dieA.body.position.x - dieB.body.position.x);
+                    const dy = dieA.body.position.y - dieB.body.position.y;
+                    const dz = Math.abs(dieA.body.position.z - dieB.body.position.z);
+
+                    // dieA is ON TOP of dieB
+                    if (dx < 0.6 && dz < 0.6 && dy > 0.8 && dy < 1.4) {
+                        if (!stackedDice.has(dieA)) {
+                            stackedDice.add(dieA);
+                            const tBonus = 2000 * (dieA.juggleMult || 1);
+                            towerBonusAmount += tBonus;
+                            showFloatingText(dieA.mesh.position, `TOWER! +${tBonus}`, true);
+                            playTone(1500, 'sine', 0.4, 0.2); // Special sound
+                            explosion(dieA.mesh.position, 60, 0xf1c40f); // gold explosion
+                        }
+                    }
+                });
+            });
+
+            diceArray.forEach(die => {
+                if (die.perkType === 'normal') {
+                    // Normal scoring logic
+                    const val = getDieValue(die.mesh);
+                    die.value = val;
+                    
+                    const juggle = die.juggleMult || 1;
+                    baseScore += val * juggle;
+                    counts[val] = (counts[val] || 0) + 1;
+                    
+                    if (juggle > 1) {
+                        die.label.innerText = `${val} (x${juggle})`;
+                    } else {
+                        die.label.innerText = val;
+                    }
+
+                    // Reset juggle if landed
+                    if (die.isResting) {
+                        die.juggleMult = 1;
+                    }
+                }
+            });
+
+            let multiplier = 1;
+            let comboDice = []; 
+            for (const [val, count] of Object.entries(counts)) {
+                if (count > 1) {
+                    multiplier += (count - 1); 
+                    comboDice.push(parseInt(val));
+                }
+            }
+
+            const scorePerLanding = baseScore * multiplier;
+            const finalScore = (scorePerLanding * landings) + towerBonusAmount;
+            
+            // Only add finalScore if we actually had normal dice contributing AND the player has rolled at least once
+            if ((baseScore > 0 || towerBonusAmount > 0) && state.playerHasRolled) {
+                state.totalScore += finalScore;
+            }
+
+            // --- RARE PERK SPAWNER ---
+            if (state.playerHasRolled && multiplier > 1 && state.status === 'playing') {
+                if (Math.random() < state.fortune) {
+                    const maxDice = 25; // Keep cap sane
+                    if (diceArray.length < maxDice) {
+                        addDice(1, true, 'bonus');
+                        setTimeout(() => playPop(), 50);
+                        
+                        const centerPos = new THREE.Vector3(0, 5, 0);
+                        showFloatingText(centerPos, `BONUS DIE! CLICK IT!`, true);
+                    }
+                }
+            }
+
+            // --- JUICE & EFFECTS ---
+            diceArray.forEach(die => {
+                if (die.perkType === 'normal') {
+                    die.label.style.opacity = 1; 
+                    if (comboDice.includes(die.value)) {
+                        const cColor = comboColors[die.value];
+                        die.mesh.material = highlightMaterialsByValue[die.value];
+                        
+                        if (state.playerHasRolled) {
+                            explosion(die.mesh.position, 40, cColor.hex);
+                        }
+                        
+                        die.label.classList.add('combo-label');
+                        die.label.style.color = cColor.str;
+                    } else {
+                        die.mesh.material = standardMaterials;
+                        die.label.classList.remove('combo-label');
+                        die.label.style.color = 'var(--text-main)';
+                    }
+                }
+            });
+
+            if (state.playerHasRolled) {
+                if(multiplier > 1) {
+                    triggerShake(0.5);
+                    document.body.style.backgroundColor = '#e0e4eb';
+                    setTimeout(() => document.body.style.backgroundColor = 'var(--bg)', 100);
+                }
+
+                playScore(multiplier); // Play dopamine score sound
+
+                // Quick hit UI Animations
+                hugeScore.innerText = `+${finalScore}`;
+                
+                multiplierText.innerText = `x${multiplier} COMBO`;
+                if (landings > 1) {
+                    multiplierText.innerText += ` [${landings}x HITS]`;
+                }
+                multiplierText.style.color = multiplier > 1 ? 'var(--primary)' : 'var(--secondary)';
+                
+                // Snap the recent score text with a bouncy elastic animation
+                gsap.killTweensOf(scoreContainer);
+                gsap.fromTo(scoreContainer, 
+                    { opacity: 0, scale: 0.2, y: 50 },
+                    { opacity: 1, scale: 1, y: 0, duration: 0.8, ease: "elastic.out(1, 0.5)" }
+                );
+
+                // Give a massive dopamine pulse to the Total Bank
+                totalScoreVal.innerText = state.totalScore;
+                gsap.fromTo(totalScoreVal, 
+                    { scale: 1.8, color: '#ff6b6b' }, 
+                    { scale: 1, color: 'var(--text-main)', duration: 0.8, ease: "elastic.out(1, 0.4)" }
+                );
+            } else {
+                hugeScore.innerText = `READY`;
+                multiplierText.innerText = `CLICK A DIE TO SCORE!`;
+                multiplierText.style.color = 'var(--secondary)';
+                gsap.killTweensOf(scoreContainer);
+                gsap.to(scoreContainer, { opacity: 1, y: 0, scale: 1, duration: 0.5 });
+            }
+        }
+
+        // --- RENDER LOOP ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = clock.getDelta();
+
+            // Timer Logic
+            if (state.status === 'playing') {
+                state.timeLeft -= dt;
+                
+                const currentSec = Math.ceil(state.timeLeft);
+                if (state.timeLeft <= 5 && state.timeLeft > 0 && !timerVal.classList.contains('danger')) {
+                    timerVal.classList.add('danger');
+                }
+
+                if (state.timeLeft <= 5 && state.timeLeft > 0 && currentSec !== state.lastTick) {
+                    playTick(); // Tick-tock panic sound
+                    state.lastTick = currentSec;
+                }
+
+                if (state.timeLeft <= 0) {
+                    state.timeLeft = 0;
+                    state.status = 'gameover';
+                    overlay.style.display = 'flex';
+                    overlayTitle.innerText = "TIME'S UP!";
+                    overlayDesc.innerText = `FINAL BANK: ${state.totalScore}`;
+                    startBtn.innerText = "PLAY AGAIN";
+                    playGameOver(); // Buzzer sound
+                }
+                timerVal.innerText = state.timeLeft.toFixed(2);
+            }
+
+            // Step Physics
+            world.step(1 / 60, dt, 3);
+
+            // Sync Meshes and Labels
+            diceArray.forEach(die => {
+                die.mesh.position.copy(die.body.position);
+                die.mesh.quaternion.copy(die.body.quaternion);
+                
+                if (die.perkType === 'normal') {
+                    die.light.position.copy(die.body.position);
+                }
+                
+                // Dynamically update Bonus Die light, floor color, and single face material!
+                if (die.perkType === 'bonus') {
+                    const val = getDieValue(die.mesh);
+                    let activePerk = '';
+                    let perkColorHex = 0xffffff;
+                    let perkColorStr = '#ffffff';
+
+                    if (val === 1 || val === 4) {
+                        die.label.innerText = 'TIME';
+                        die.label.style.color = '#2ecc71';
+                        activePerk = 'time'; perkColorHex = 0x2ecc71; perkColorStr = '#2ecc71';
+                    } else if (val === 2 || val === 5) {
+                        die.label.innerText = 'GOLD';
+                        die.label.style.color = '#f1c40f';
+                        activePerk = 'gold'; perkColorHex = 0xf1c40f; perkColorStr = '#f1c40f';
+                    } else if (val === 3 || val === 6) {
+                        die.label.innerText = 'NOVA';
+                        die.label.style.color = '#9b59b6';
+                        activePerk = 'nova'; perkColorHex = 0x9b59b6; perkColorStr = '#9b59b6';
+                    }
+                    die.label.style.opacity = 1; 
+                    die.label.classList.add('combo-label');
+
+                    // 1. Point the light down to heavily paint the terrain underneath the die
+                    die.light.color.setHex(perkColorHex);
+                    die.light.intensity = 5; 
+                    die.light.position.copy(die.body.position);
+                    die.light.position.y = Math.max(0.2, die.body.position.y - 0.8);
+
+                    // 2. Dynamically change ONLY the face currently pointing UP
+                    // Map the top-facing value to the material index (Right:0, Left:1, Top:2, Bottom:3, Front:4, Back:5)
+                    const valToIndex = { 3:0, 4:1, 1:2, 6:3, 2:4, 5:5 };
+                    const upIndex = valToIndex[val];
+                    
+                    const cacheKey = `${val}-${activePerk}`;
+                    if (!bonusMaterialCache[cacheKey]) {
+                        bonusMaterialCache[cacheKey] = new THREE.MeshStandardMaterial({
+                            map: createDiceTexture(val, true, perkColorStr),
+                            roughness: 0.4,
+                            metalness: 0.1,
+                            emissive: perkColorHex,
+                            emissiveIntensity: 0.6 // Make the top face glow!
+                        });
+                    }
+
+                    // Clone standard array and swap only the up-facing material
+                    const matArray = [...standardMaterials];
+                    matArray[upIndex] = bonusMaterialCache[cacheKey];
+                    die.mesh.material = matArray;
+                }
+
+                if (parseFloat(die.label.style.opacity) > 0) {
+                    const vector = die.mesh.position.clone();
+                    vector.y += 1.0; 
+                    vector.project(camera);
+                    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+                    die.label.style.left = `${x}px`;
+                    die.label.style.top = `${y}px`;
+                }
+            });
+
+            updateParticles();
+
+            // Check for resting state per die (evaluate points immediately when any die lands)
+            let landedCount = 0;
+            diceArray.forEach(die => {
+                const vel = die.body.velocity.lengthSquared();
+                const angVel = die.body.angularVelocity.lengthSquared();
+                
+                if (vel < 0.1 && angVel < 0.1) {
+                    if (!die.isResting) {
+                        die.isResting = true;
+                        landedCount++;
+                    }
+                } else if (vel > 1.0 || angVel > 1.0) {
+                    // Un-rest if it gets bumped hard by another die
+                    die.isResting = false;
+                }
+            });
+
+            if (landedCount > 0 && state.status === 'playing') {
+                calculateResults(landedCount);
+            }
+
+            // Camera Shake
+            if(state.shakeIntensity > 0) {
+                camera.position.x = (Math.random() - 0.5) * state.shakeIntensity;
+                camera.position.y = 10 + (Math.random() - 0.5) * state.shakeIntensity;
+                camera.lookAt(0, -2, 0);
+                state.shakeIntensity -= 0.02; 
+                if(state.shakeIntensity < 0) {
+                    state.shakeIntensity = 0;
+                    camera.position.set(0, 10, 14);
+                    camera.lookAt(0, -2, 0);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
